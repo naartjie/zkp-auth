@@ -1,0 +1,9 @@
+services:
+  # server:
+  client:
+    build:
+      context: .
+      dockerfile: Dockerfile.client
+    environment:
+      - AUTH_USER
+      - AUTH_PASS

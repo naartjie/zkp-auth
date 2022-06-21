@@ -1,0 +1,29 @@
+syntax = "proto3";
+package zkp_auth;
+
+service Auth {
+    rpc Register (RegisterRequest) returns (RegisterReply);
+    // fn create_authentication_challenge(
+    //     user: User,
+    //     auth_request: AuthenticationRequest,
+    // ) -> Challenge;
+    // fn verify_authentication(user: User, answer: Answer) -> bool;
+}
+
+message Committs {
+    uint64 r1 = 1;
+    uint64 r2 = 2;
+    uint64 y1 = 3;
+    uint64 y2 = 4;
+    uint64 g = 5;
+    uint64 h = 6;
+}
+
+message RegisterRequest {
+    string username = 1;
+    Committs committs = 2;
+}
+
+message RegisterReply {
+    bool result = 1;
+}
