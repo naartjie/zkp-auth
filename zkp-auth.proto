@@ -3,11 +3,10 @@ package zkp_auth;
 
 service Auth {
     rpc Register (RegisterRequest) returns (RegisterReply);
-    // fn create_authentication_challenge(
-    //     user: User,
-    //     auth_request: AuthenticationRequest,
-    // ) -> Challenge;
-    // fn verify_authentication(user: User, answer: Answer) -> bool;
+
+    rpc CreateAuthenticationChallenge (AuthenticationChallengeRequest) returns (AuthenticationChallengeReply);
+
+    rpc VerifyAuthentication (VerifyAuthenticationRequest) returns (VerifyAuthenticationReply);
 }
 
 message Committs {
@@ -25,5 +24,24 @@ message RegisterRequest {
 }
 
 message RegisterReply {
+    bool result = 1;
+}
+
+message AuthenticationChallengeRequest {
+    string username = 1;
+    string authentication_request_id = 2;
+}
+
+message AuthenticationChallengeReply {
+    uint32 challenge = 1;
+}
+
+message VerifyAuthenticationRequest {
+    string username = 1;
+    string authentication_request_id = 2;
+    uint32 answer = 3;
+}
+
+message VerifyAuthenticationReply {
     bool result = 1;
 }
