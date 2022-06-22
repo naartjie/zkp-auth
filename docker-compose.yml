@@ -1,9 +1,17 @@
 services:
-  # server:
+  server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: /app/server
   client:
     build:
       context: .
-      dockerfile: Dockerfile.client
+      dockerfile: Dockerfile
+    command: /app/client
+    depends_on:
+      - server
     environment:
-      - AUTH_USER
-      - AUTH_PASS
+      - AUTH_SERVER=server
+      - AUTH_USER=peggy
+      - AUTH_PASS=123123123
