@@ -30,9 +30,7 @@ cargo run --bin server
 
 ### Next steps
 
-- use a crypto library for all the math operations
-  - cryptographically secure random numbers
-  - big ints
+- cryptographically secure random numbers
 - timeout challenges
 - use a real database to store usernames / commits
 - experiment with a streaming gRPC API which would allow to not store the challenges, they'd be part of the stream state
