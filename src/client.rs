@@ -1,66 +1,58 @@
+use num_bigint::{BigUint, ToBigUint};
 use std::env;
 use tokio::time::{sleep, Duration};
 use uuid::Uuid;
-use zkp_auth::auth_client::AuthClient;
-use zkp_auth::{
-    AuthenticationChallengeRequest, Committs, RegisterRequest, VerifyAuthenticationRequest,
+use zkp_auth::proto::auth_client::AuthClient;
+use zkp_auth::proto::{
+    AuthenticationChallengeRequest, RegisterRequest, VerifyAuthenticationRequest,
 };
 
-pub mod zkp_auth {
-    tonic::include_proto!("zkp_auth");
-}
+use zkp_auth::Committs;
 
-fn create_register_commits(secret: u32) -> Committs {
+fn create_register_commits(secret: &BigUint) -> Committs {
     // secret (aka password)
-    let x: u32 = secret;
+    let x: &BigUint = secret;
 
-    let p: u64 = 23;
-    // TODO
-    let q: u64 = 11;
-    let g: u64 = 4;
-    let h: u64 = 9;
+    let p = 23_u64.to_biguint().unwrap();
+    // TODO: q is unused?
+    // let q = 11_u64.to_biguint().unwrap();
+    let g = 4_u64.to_biguint().unwrap();
+    let h = 9_u64.to_biguint().unwrap();
 
     // publish
     // 𝑦1 = 𝑔𝑥 mod 𝑝 = 46 mod 23 = 2
     // 𝑦2 = ℎ𝑥 mod 𝑝 = 96 mod 23 = 3
-    let y1 = g.pow(x).rem_euclid(p);
-    let y2 = h.pow(x).rem_euclid(p);
+    let y1 = g.modpow(x, &p);
+    let y2 = h.modpow(x, &p);
 
-    // pick a random k
-    let k: u32 = 7;
+    // TODO: pick a random number
+    // let k = 7_u64.to_biguint().unwrap();
 
     // 𝑟1 = 𝑔𝑘 mod 𝑝
     // 𝑟2 = ℎ𝑘 mod 𝑝
-    let r1: u64 = g.pow(k).rem_euclid(p);
-    let r2: u64 = h.pow(k).rem_euclid(p);
+    // let r1 = g.modpow(&k, &p);
+    // let r2 = h.modpow(&k, &p);
 
-    Committs {
-        r1,
-        r2,
-        y1,
-        y2,
-        g,
-        h,
-    }
+    Committs { y1, y2 }
 }
 
-fn prove_authentication(password: u32, challenge: u32) -> u32 {
-    // 𝑠 = (𝑘 − 𝑐 ⋅ 𝑥) mod 𝑞
-    let k: i64 = 7;
-    let q: i64 = 11;
-    let c: i64 = challenge.into();
-    let x: i64 = password.into();
+fn prove_authentication(password: &BigUint, challenge: &BigUint) -> BigUint {
+    use num_traits::identities::One;
 
-    (k - c * x).rem_euclid(q).try_into().unwrap()
+    // 𝑠 = (𝑘 − 𝑐 ⋅ 𝑥) mod 𝑞
+    let k = &7_u64.to_biguint().unwrap();
+    let q = &11_u64.to_biguint().unwrap();
+
+    (k - challenge.modpow(password, q)).modpow(&BigUint::one(), q)
 }
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let username = &env::var("AUTH_USER").expect("please set $AUTH_USER env var");
-    let password = env::var("AUTH_PASS")
-        .expect("please set $AUTH_PASS env var")
-        .parse::<u32>()
-        .expect("password must be an integer");
+
+    let password = env::var("AUTH_PASS").expect("please set $AUTH_PASS env var");
+    let password = &BigUint::parse_bytes(password.as_bytes(), 10)
+        .expect("$AUTH_PASS must be a (large) integer");
 
     println!("USERNAME={username} PASSWORD={password}");
 
@@ -71,7 +63,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let request = tonic::Request::new(RegisterRequest {
         username: username.to_string(),
-        committs: Some(create_register_commits(password)),
+        committs: Some(create_register_commits(password).into()),
     });
 
     let response = auth_service.register(request).await?;
@@ -88,14 +80,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let response = auth_service
             .create_authentication_challenge(request)
             .await?;
-        let challenge = response.into_inner().challenge;
 
+        let challenge = &BigUint::from_bytes_be(&response.into_inner().challenge);
         println!("got challenge {challenge}");
 
         let request = tonic::Request::new(VerifyAuthenticationRequest {
             authentication_request_id: request_id.to_string(),
             username: username.to_string(),
-            answer: prove_authentication(password, challenge),
+            answer: prove_authentication(password, &challenge).to_bytes_be(),
         });
 
         let response = auth_service.verify_authentication(request).await?;
