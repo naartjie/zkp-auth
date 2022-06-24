@@ -6,7 +6,6 @@ use zkp_auth::proto::auth_client::AuthClient;
 use zkp_auth::proto::{
     AuthenticationChallengeRequest, RegisterRequest, VerifyAuthenticationRequest,
 };
-
 use zkp_auth::Committs;
 
 fn create_register_commits(secret: &BigUint) -> Committs {

@@ -9,8 +9,6 @@ use zkp_auth::proto::{
 };
 use zkp_auth::Committs;
 
-mod lib;
-
 pub struct ZkpAuthService {
     db: Arc<Mutex<HashMap<String, Committs>>>,
     // challenges: Arc<Mutex<HashMap<String, uint64>>>,
