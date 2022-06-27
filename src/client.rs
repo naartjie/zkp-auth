@@ -17,7 +17,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let password = &BigUint::parse_bytes(password.as_bytes(), 10)
         .expect("$AUTH_PASS must be a (large) integer");
 
-    println!("client starting up: USERNAME={username} PASSWORD={password}");
+    println!("client starting: USERNAME={username} PASSWORD={password}");
 
     let server: &str = &env::var("AUTH_SERVER").unwrap_or("localhost".to_string());
     let uri = format!("http://{server}:50051");

@@ -10,6 +10,12 @@ docker-compose up --build
 docker-compose down
 ```
 
+Running the tests
+
+```sh
+cargo test
+```
+
 ### gRPC
 
 The client / server use gRPC, via the [tonic](https://docs.rs/tonic/0.7.2/tonic/index.html) library. The protocol definition is in [`zkp-auth.proto`](./zkp-auth.proto).
