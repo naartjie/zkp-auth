@@ -1033,6 +1033,7 @@ name = "zkp-auth"
 version = "0.0.1"
 dependencies = [
  "num-bigint",
+ "num-integer",
  "num-traits",
  "prost",
  "rand",

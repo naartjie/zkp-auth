@@ -9,14 +9,14 @@ service Auth {
     rpc VerifyAuthentication (VerifyAuthenticationRequest) returns (VerifyAuthenticationReply);
 }
 
-message Committs {
-    bytes y1 = 3;
-    bytes y2 = 4;
+message NumTuple {
+    bytes t1 = 3;
+    bytes t2 = 4;
 }
 
 message RegisterRequest {
     string username = 1;
-    Committs committs = 2;
+    NumTuple committs = 2;
 }
 
 message RegisterReply {
@@ -25,17 +25,18 @@ message RegisterReply {
 
 message AuthenticationChallengeRequest {
     string username = 1;
-    string authentication_request_id = 2;
+    string auth_uid = 2;
+    NumTuple auth_request = 3;
 }
 
 message AuthenticationChallengeReply {
-    bytes challenge = 1;
+    bytes challenge_c = 1;
 }
 
 message VerifyAuthenticationRequest {
     string username = 1;
-    string authentication_request_id = 2;
-    bytes answer = 3;
+    string auth_uid = 2;
+    bytes answer_s = 3;
 }
 
 message VerifyAuthenticationReply {

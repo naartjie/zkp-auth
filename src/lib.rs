@@ -5,26 +5,22 @@ pub mod proto {
     tonic::include_proto!("zkp_auth");
 }
 
-#[derive(Debug)]
-pub struct Committs {
-    pub y1: BigUint,
-    pub y2: BigUint,
-}
+pub mod crypto;
 
-impl From<Committs> for proto::Committs {
-    fn from(item: Committs) -> Self {
-        proto::Committs {
-            y1: item.y1.to_bytes_be(),
-            y2: item.y2.to_bytes_be(),
+impl From<(BigUint, BigUint)> for proto::NumTuple {
+    fn from((t1, t2): (BigUint, BigUint)) -> Self {
+        proto::NumTuple {
+            t1: t1.to_bytes_be(),
+            t2: t2.to_bytes_be(),
         }
     }
 }
 
-impl From<proto::Committs> for Committs {
-    fn from(item: proto::Committs) -> Self {
-        Committs {
-            y1: BigUint::from_bytes_be(&item.y1),
-            y2: BigUint::from_bytes_be(&item.y2),
-        }
+impl From<proto::NumTuple> for (BigUint, BigUint) {
+    fn from(item: proto::NumTuple) -> Self {
+        (
+            BigUint::from_bytes_be(&item.t1),
+            BigUint::from_bytes_be(&item.t2),
+        )
     }
 }

@@ -17,8 +17,9 @@ prost = "0.10.4"
 tokio = { version = "1.19.2", features = ["macros", "rt-multi-thread"] }
 uuid = { version = "1.1.2", features = [ "v4" ] }
 rand = "0.8.5"
-num-bigint = { version = "0.4.3", features = ["rand"] }
 num-traits = { version = "0.2.15", default-features = false }
+num-integer = "0.1.45"
+num-bigint = { version = "0.4.3", features = ["rand"] }
 
 [build-dependencies]
 tonic-build = "0.7.2"

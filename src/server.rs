@@ -1,46 +1,18 @@
-use num_bigint::{BigUint, RandBigInt, ToBigUint};
+use num_bigint::{BigUint, RandBigInt};
+use num_traits::FromPrimitive;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use tonic::{transport::Server, Request, Response, Status};
+use zkp_auth::crypto;
 use zkp_auth::proto::auth_server::{Auth, AuthServer};
 use zkp_auth::proto::{
     AuthenticationChallengeReply, AuthenticationChallengeRequest, RegisterReply, RegisterRequest,
     VerifyAuthenticationReply, VerifyAuthenticationRequest,
 };
-use zkp_auth::Committs;
 
 pub struct ZkpAuthService {
-    db: Arc<Mutex<HashMap<String, Committs>>>,
+    db: Arc<Mutex<HashMap<String, crypto::NumTuple>>>,
     // challenges: Arc<Mutex<HashMap<String, uint64>>>,
-}
-
-fn verify_authentication(
-    committs: &Committs,
-    r1: &BigUint,
-    r2: &BigUint,
-    challenge: &BigUint,
-    answer: &BigUint,
-) -> bool {
-    let s = answer;
-    let c = challenge;
-    // let r1 = &BigUint::parse_bytes(&committs.r1, 10).unwrap();
-    // let r2 = &BigUint::parse_bytes(&committs.r2, 10).unwrap();
-    let y1 = &committs.y1;
-    let y2 = &committs.y2;
-    // let g = &BigUint::parse_bytes(&committs.g, 10).unwrap();
-    // let h = &BigUint::parse_bytes(&committs.h, 10).unwrap();
-
-    let g = 4_u64.to_biguint().unwrap();
-    let h = 9_u64.to_biguint().unwrap();
-
-    // TODO
-    let p = &23_u64.to_biguint().unwrap();
-    // 𝑟1 = 8 is the same as 𝑔𝑠 ⋅ 𝑦𝑐1 mod 𝑝 = 45 ⋅ 24 mod 23 = 8
-    let r1_calc = g.modpow(s, p).modpow(&y1.modpow(c, p), p);
-    // 𝑟2 = 4 is the same as ℎ𝑠 ⋅ 𝑦𝑐2 mod 𝑝 = 95 ⋅ 34 mod 23 = 4
-    let r2_calc = h.modpow(s, p).modpow(&y2.modpow(c, p), p);
-
-    r1.eq(&r1_calc) && r2.eq(&r2_calc)
 }
 
 #[tonic::async_trait]
@@ -52,7 +24,7 @@ impl Auth for ZkpAuthService {
         let args = request.into_inner();
         let username = args.username;
 
-        let committs: Committs = args.committs.unwrap().into();
+        let (y1, y2): (BigUint, BigUint) = args.committs.unwrap().into();
         println!("register({username})");
 
         let mut db = self.db.lock().unwrap();
@@ -60,7 +32,7 @@ impl Auth for ZkpAuthService {
             println!("can't register username '{username}', it exists already");
             false
         } else {
-            db.insert(username, committs);
+            db.insert(username, (y1, y2));
             true
         };
         Ok(Response::new(RegisterReply { result }))
@@ -76,15 +48,15 @@ impl Auth for ZkpAuthService {
 
         match db.get(&username) {
             Some(committs) => {
-                println!("got committs for {username} {:?}", committs);
+                println!("got (y1, y2) committs for {username} {:?}", committs);
 
                 let mut rng = rand::thread_rng();
                 let _a = rng.gen_biguint(1000);
 
                 // TODO use random number
-                let challenge = 4_u64.to_biguint().unwrap();
+                let challenge_c = BigUint::from_u32(4).unwrap();
                 let reply = AuthenticationChallengeReply {
-                    challenge: challenge.to_bytes_be(),
+                    challenge_c: challenge_c.to_bytes_be(),
                 };
                 Ok(Response::new(reply))
             }
@@ -100,19 +72,35 @@ impl Auth for ZkpAuthService {
         request: Request<VerifyAuthenticationRequest>,
     ) -> Result<Response<VerifyAuthenticationReply>, Status> {
         let data = request.into_inner();
-        let _id = data.authentication_request_id;
+        let _id = data.auth_uid;
         let username = data.username;
-        let answer = &BigUint::from_bytes_be(&data.answer);
+        let answer_s = BigUint::from_bytes_be(&data.answer_s);
+
+        // TODO
+        let consts = crypto::Consts {
+            g: BigUint::from(4_u32),
+            h: BigUint::from(9_u32),
+            p: BigUint::from(23_u32),
+        };
+
         // TODO lookup from hashmap
-        let challenge = &4_u64.to_biguint().unwrap();
+        let r1: BigUint = 8_u32.into();
+        let r2 = BigUint::from(4_u32);
+        let challenge_c = BigUint::from(4_u32);
+
         let db = self.db.lock().unwrap();
         let committs = db.get(&username);
 
-        let r1 = &0_u64.to_biguint().unwrap();
-        let r2 = &0_u64.to_biguint().unwrap();
-
         let result = match committs {
-            Some(committs) => verify_authentication(committs, r1, r2, challenge, answer),
+            Some((y1, y2)) => crypto::verify_authentication(
+                consts,
+                y1.clone(),
+                y2.clone(),
+                r1,
+                r2,
+                challenge_c,
+                answer_s,
+            ),
             None => false,
         };
 

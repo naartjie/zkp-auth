@@ -1,4 +1,5 @@
-use num_bigint::{BigUint, ToBigUint};
+use num_bigint::BigUint;
+use num_traits::FromPrimitive;
 use std::env;
 use tokio::time::{sleep, Duration};
 use uuid::Uuid;
@@ -6,87 +7,66 @@ use zkp_auth::proto::auth_client::AuthClient;
 use zkp_auth::proto::{
     AuthenticationChallengeRequest, RegisterRequest, VerifyAuthenticationRequest,
 };
-use zkp_auth::Committs;
 
-fn create_register_commits(secret: &BigUint) -> Committs {
-    // secret (aka password)
-    let x: &BigUint = secret;
-
-    let p = 23_u64.to_biguint().unwrap();
-    // TODO: q is unused?
-    // let q = 11_u64.to_biguint().unwrap();
-    let g = 4_u64.to_biguint().unwrap();
-    let h = 9_u64.to_biguint().unwrap();
-
-    // publish
-    // 𝑦1 = 𝑔𝑥 mod 𝑝 = 46 mod 23 = 2
-    // 𝑦2 = ℎ𝑥 mod 𝑝 = 96 mod 23 = 3
-    let y1 = g.modpow(x, &p);
-    let y2 = h.modpow(x, &p);
-
-    // TODO: pick a random number
-    // let k = 7_u64.to_biguint().unwrap();
-
-    // 𝑟1 = 𝑔𝑘 mod 𝑝
-    // 𝑟2 = ℎ𝑘 mod 𝑝
-    // let r1 = g.modpow(&k, &p);
-    // let r2 = h.modpow(&k, &p);
-
-    Committs { y1, y2 }
-}
-
-fn prove_authentication(password: &BigUint, challenge: &BigUint) -> BigUint {
-    use num_traits::identities::One;
-
-    // 𝑠 = (𝑘 − 𝑐 ⋅ 𝑥) mod 𝑞
-    let k = &7_u64.to_biguint().unwrap();
-    let q = &11_u64.to_biguint().unwrap();
-
-    (k - challenge.modpow(password, q)).modpow(&BigUint::one(), q)
-}
+use zkp_auth::crypto;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let username = &env::var("AUTH_USER").expect("please set $AUTH_USER env var");
-
     let password = env::var("AUTH_PASS").expect("please set $AUTH_PASS env var");
     let password = &BigUint::parse_bytes(password.as_bytes(), 10)
         .expect("$AUTH_PASS must be a (large) integer");
 
-    println!("USERNAME={username} PASSWORD={password}");
+    println!("client starting up: USERNAME={username} PASSWORD={password}");
 
     let server: &str = &env::var("AUTH_SERVER").unwrap_or("localhost".to_string());
     let uri = format!("http://{server}:50051");
     println!("connecting to {uri}");
     let mut auth_service = AuthClient::connect(uri).await?;
 
+    // TODO
+    let consts = crypto::Consts {
+        g: BigUint::from_u32(4).unwrap(),
+        h: BigUint::from_u32(9).unwrap(),
+        p: BigUint::from_u32(23).unwrap(),
+    };
+
     let request = tonic::Request::new(RegisterRequest {
         username: username.to_string(),
-        committs: Some(create_register_commits(password).into()),
+        committs: Some(crypto::create_register_commits(consts, password.clone()).into()),
     });
 
     let response = auth_service.register(request).await?;
     let result = response.into_inner().result;
 
-    if result {
+    if !result {
+        println!("failed to register, does the username exist already?");
+    } else {
         println!("registered successfully");
 
-        let request_id = Uuid::new_v4();
+        let r1 = BigUint::from(8_u32);
+        let r2 = BigUint::from(4_u32);
+
+        let auth_uid = Uuid::new_v4();
         let request = tonic::Request::new(AuthenticationChallengeRequest {
             username: username.to_string(),
-            authentication_request_id: request_id.to_string(),
+            auth_uid: auth_uid.to_string(),
+            auth_request: Some((r1, r2).into()),
         });
         let response = auth_service
             .create_authentication_challenge(request)
             .await?;
 
-        let challenge = &BigUint::from_bytes_be(&response.into_inner().challenge);
-        println!("got challenge {challenge}");
+        let challenge_c = &BigUint::from_bytes_be(&response.into_inner().challenge_c);
+        println!("got challenge {challenge_c}");
 
+        let k: BigUint = 4_u32.into();
+        let q: BigUint = 11_u32.into();
         let request = tonic::Request::new(VerifyAuthenticationRequest {
-            authentication_request_id: request_id.to_string(),
             username: username.to_string(),
-            answer: prove_authentication(password, &challenge).to_bytes_be(),
+            auth_uid: auth_uid.to_string(),
+            answer_s: crypto::prove_authentication(k, q, password.clone(), challenge_c.clone())
+                .to_bytes_be(),
         });
 
         let response = auth_service.verify_authentication(request).await?;
@@ -98,10 +78,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         } else {
             println!("login failed");
         }
-
-        Ok(())
-    } else {
-        println!("failed to register, does the username exist already?");
-        Ok(())
     }
+
+    Ok(())
 }
