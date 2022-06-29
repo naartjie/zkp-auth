@@ -10,9 +10,24 @@ use zkp_auth::proto::{
     VerifyAuthenticationReply, VerifyAuthenticationRequest,
 };
 
+struct UserData {
+    pub y1y2: crypto::NumTuple,
+    pub r1r2: Option<crypto::NumTuple>,
+    pub challenge: Option<BigUint>,
+}
+
 pub struct ZkpAuthService {
+    // TODO: rename
+    // username -> (y1, y2)
     db: Arc<Mutex<HashMap<String, crypto::NumTuple>>>,
-    // challenges: Arc<Mutex<HashMap<String, uint64>>>,
+    // TODO: better name?
+    // (username, challenge_c) -> (r1, r2)
+    // challenge_c -> username, (r1, r2)
+    challenges: Arc<Mutex<HashMap<String, crypto::NumTuple>>>,
+    
+    // challenges.set(^^) -> setTimeout(() => challenges.delete())
+    // username -> challenge_c, (r1, r2)
+    // challenges.get((username, challenge_c)) => Option<(r1, r2)>
 }
 
 #[tonic::async_trait]

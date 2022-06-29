@@ -39,4 +39,3 @@ cargo run --bin server
 - cryptographically secure random numbers
 - timeout challenges
 - use a real database to store usernames / commits
-- experiment with a streaming gRPC API which would allow to not store the challenges, they'd be part of the stream state
