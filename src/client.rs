@@ -2,7 +2,6 @@ use num_bigint::BigUint;
 use num_traits::FromPrimitive;
 use std::env;
 use tokio::time::{sleep, Duration};
-use uuid::Uuid;
 use zkp_auth::proto::auth_client::AuthClient;
 use zkp_auth::proto::{
     AuthenticationChallengeRequest, RegisterRequest, VerifyAuthenticationRequest,
@@ -47,10 +46,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let r1 = BigUint::from(8_u32);
         let r2 = BigUint::from(4_u32);
 
-        let auth_uid = Uuid::new_v4();
         let request = tonic::Request::new(AuthenticationChallengeRequest {
             username: username.to_string(),
-            auth_uid: auth_uid.to_string(),
             auth_request: Some((r1, r2).into()),
         });
         let response = auth_service
@@ -64,7 +61,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let q: BigUint = 11_u32.into();
         let request = tonic::Request::new(VerifyAuthenticationRequest {
             username: username.to_string(),
-            auth_uid: auth_uid.to_string(),
+            challenge_c: BigUint::to_bytes_be(challenge_c),
             answer_s: crypto::prove_authentication(k, q, password.clone(), challenge_c.clone())
                 .to_bytes_be(),
         });
