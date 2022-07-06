@@ -33,7 +33,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let request = tonic::Request::new(RegisterRequest {
         username: username.to_string(),
-        committs: Some(crypto::create_register_commits(consts, password.clone()).into()),
+        commits: Some(crypto::create_register_commits(consts, password.clone()).into()),
     });
 
     let response = auth_service.register(request).await?;

@@ -16,7 +16,7 @@ message NumTuple {
 
 message RegisterRequest {
     string username = 1;
-    NumTuple committs = 2;
+    NumTuple commits = 2;
 }
 
 message RegisterReply {

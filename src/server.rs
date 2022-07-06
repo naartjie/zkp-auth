@@ -24,7 +24,7 @@ impl Auth for ZkpAuthService {
         let args = request.into_inner();
         let username = args.username;
 
-        let (y1, y2): (BigUint, BigUint) = args.committs.unwrap().into();
+        let (y1, y2): (BigUint, BigUint) = args.commits.unwrap().into();
         println!("register({username})");
 
         let mut db = self.db.lock().unwrap();
@@ -47,8 +47,8 @@ impl Auth for ZkpAuthService {
         let db = self.db.lock().unwrap();
 
         match db.get(&username) {
-            Some(committs) => {
-                println!("got (y1, y2) committs for {username} {:?}", committs);
+            Some(commits) => {
+                println!("got (y1, y2) commits for {username} {:?}", commits);
 
                 let mut rng = rand::thread_rng();
                 let _a = rng.gen_biguint(1000);
@@ -89,9 +89,9 @@ impl Auth for ZkpAuthService {
         let challenge_c = BigUint::from(4_u32);
 
         let db = self.db.lock().unwrap();
-        let committs = db.get(&username);
+        let commits = db.get(&username);
 
-        let result = match committs {
+        let result = match commits {
             Some((y1, y2)) => crypto::verify_authentication(
                 consts,
                 y1.clone(),
