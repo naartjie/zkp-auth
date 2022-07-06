@@ -8,9 +8,10 @@ pub struct Consts {
     pub g: BigUint,
     pub h: BigUint,
     pub p: BigUint,
+    pub q: BigUint,
 }
 
-pub fn create_register_commits(consts: Consts, secret_x: BigUint) -> (BigUint, BigUint) {
+pub fn create_register_commits(consts: &Consts, secret_x: BigUint) -> (BigUint, BigUint) {
     let y1 = consts.g.modpow(&secret_x, &consts.p);
     let y2 = consts.h.modpow(&secret_x, &consts.p);
 
@@ -80,6 +81,7 @@ mod tests {
             g: BigUint::from(4_u32),
             h: BigUint::from(9_u32),
             p: BigUint::from(23_u32),
+            q: BigUint::from(11_u32),
         }
     }
 
@@ -87,7 +89,7 @@ mod tests {
     fn test_create_register_commits() {
         let consts = consts();
         let secret_x = BigUint::from(6_u32);
-        let (y1, y2) = create_register_commits(consts, secret_x);
+        let (y1, y2) = create_register_commits(&consts, secret_x);
 
         assert_eq!(y1, (BigUint::from(2_u32)));
         assert_eq!(y2, (BigUint::from(3_u32)));

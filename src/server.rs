@@ -1,4 +1,4 @@
-use num_bigint::{BigUint, RandBigInt};
+use num_bigint::BigUint;
 use num_traits::FromPrimitive;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
@@ -10,23 +10,15 @@ use zkp_auth::proto::{
     VerifyAuthenticationReply, VerifyAuthenticationRequest,
 };
 
-struct UserData {
-    pub y1y2: crypto::NumTuple,
-    pub r1r2: Option<crypto::NumTuple>,
-    pub challenge: Option<BigUint>,
-}
-
 pub struct ZkpAuthService {
     // TODO: rename
     // username -> (y1, y2)
     db: Arc<Mutex<HashMap<String, crypto::NumTuple>>>,
+
     // TODO: better name?
+    // TODO: challenges.set(^^) -> setTimeout(() => challenges.delete())
     // (username, challenge_c) -> (r1, r2)
-    // challenge_c -> username, (r1, r2)
-    // challenges: Arc<Mutex<HashMap<String, crypto::NumTuple>>>,
-    // challenges.set(^^) -> setTimeout(() => challenges.delete())
-    // username -> challenge_c, (r1, r2)
-    // challenges.get((username, challenge_c)) => Option<(r1, r2)>
+    challenges: Arc<Mutex<HashMap<(String, BigUint), crypto::NumTuple>>>,
 }
 
 #[tonic::async_trait]
@@ -56,19 +48,19 @@ impl Auth for ZkpAuthService {
         &self,
         request: Request<AuthenticationChallengeRequest>,
     ) -> Result<Response<AuthenticationChallengeReply>, Status> {
-        let username = request.into_inner().username;
-
+        let body = request.into_inner();
+        let username = body.username;
+        let (r1, r2) = body.auth_request.unwrap().into();
         let db = self.db.lock().unwrap();
-
         match db.get(&username) {
-            Some(commits) => {
-                println!("got (y1, y2) commits for {username} {:?}", commits);
-
-                let mut rng = rand::thread_rng();
-                let _a = rng.gen_biguint(1000);
-
+            Some(_) => {
                 // TODO use random number
+                // let mut rng = rand::thread_rng();
+                // let _a = rng.gen_biguint(1000);
                 let challenge_c = BigUint::from_u32(4).unwrap();
+                let mut challenges = self.challenges.lock().unwrap();
+                challenges.insert((username, challenge_c.clone()), (r1, r2));
+
                 let reply = AuthenticationChallengeReply {
                     challenge_c: challenge_c.to_bytes_be(),
                 };
@@ -95,26 +87,26 @@ impl Auth for ZkpAuthService {
             g: BigUint::from(4_u32),
             h: BigUint::from(9_u32),
             p: BigUint::from(23_u32),
+            q: BigUint::from(11_u32),
         };
 
-        // TODO lookup from hashmap
-        let r1: BigUint = 8_u32.into();
-        let r2 = BigUint::from(4_u32);
-
         let db = self.db.lock().unwrap();
-        let commits = db.get(&username);
+        let challenges = self.challenges.lock().unwrap();
 
-        let result = match commits {
-            Some((y1, y2)) => crypto::verify_authentication(
+        let ys = db.get(&username);
+        let rs = challenges.get(&(username.clone(), challenge_c.clone()));
+
+        let result = match (ys, rs) {
+            (Some((y1, y2)), Some((r1, r2))) => crypto::verify_authentication(
                 consts,
                 y1.clone(),
                 y2.clone(),
-                r1,
-                r2,
+                r1.clone(),
+                r2.clone(),
                 challenge_c,
                 answer_s,
             ),
-            None => false,
+            _ => false,
         };
 
         Ok(Response::new(VerifyAuthenticationReply { result }))
@@ -124,6 +116,7 @@ impl Auth for ZkpAuthService {
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let auth_service = ZkpAuthService {
         db: Arc::new(Mutex::new(HashMap::new())),
+        challenges: Arc::new(Mutex::new(HashMap::new())),
     };
 
     let addr = "0.0.0.0:50051".parse().unwrap();

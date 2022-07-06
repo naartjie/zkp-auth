@@ -1,3 +1,6 @@
-- store challenge responses in hashmap
-- generate "reasonable" Consts (Factors)
-- property based testing
+- [x] store challenge responses in hashmap
+- [x] fix commits spelling
+- [ ] fix non-idiomatic rust - eg .clone()
+- [ ] can it handle concurrent auth requests
+- [ ] property based testing
+- [ ] generate "reasonable" Consts (Factors)

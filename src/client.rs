@@ -28,11 +28,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         g: BigUint::from_u32(4).unwrap(),
         h: BigUint::from_u32(9).unwrap(),
         p: BigUint::from_u32(23).unwrap(),
+        q: BigUint::from_u32(11).unwrap(),
     };
 
     let request = tonic::Request::new(RegisterRequest {
         username: username.to_string(),
-        commits: Some(crypto::create_register_commits(consts, password.clone()).into()),
+        commits: Some(crypto::create_register_commits(&consts, password.clone()).into()),
     });
 
     let response = auth_service.register(request).await?;
@@ -57,8 +58,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let challenge_c = &BigUint::from_bytes_be(&response.into_inner().challenge_c);
         println!("got challenge {challenge_c}");
 
-        let k: BigUint = 4_u32.into();
-        let q: BigUint = 11_u32.into();
+        // TODO
+        let k: BigUint = 7_u32.into();
         let request = tonic::Request::new(VerifyAuthenticationRequest {
             username: username.to_string(),
             challenge_c: BigUint::to_bytes_be(challenge_c),
