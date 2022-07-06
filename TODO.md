@@ -1,0 +1,3 @@
+- store challenge responses in hashmap
+- generate "reasonable" Consts (Factors)
+- property based testing

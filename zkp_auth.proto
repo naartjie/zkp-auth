@@ -25,7 +25,6 @@ message RegisterReply {
 
 message AuthenticationChallengeRequest {
     string username = 1;
-    string auth_uid = 2;
     NumTuple auth_request = 3;
 }
 
@@ -35,7 +34,7 @@ message AuthenticationChallengeReply {
 
 message VerifyAuthenticationRequest {
     string username = 1;
-    string auth_uid = 2;
+    bytes challenge_c = 2;
     bytes answer_s = 3;
 }
 

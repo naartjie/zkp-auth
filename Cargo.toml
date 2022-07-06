@@ -15,7 +15,6 @@ path = "src/server.rs"
 tonic = "0.7.2"
 prost = "0.10.4"
 tokio = { version = "1.19.2", features = ["macros", "rt-multi-thread"] }
-uuid = { version = "1.1.2", features = [ "v4" ] }
 rand = "0.8.5"
 num-traits = { version = "0.2.15", default-features = false }
 num-integer = "0.1.45"

@@ -10,9 +10,23 @@ use zkp_auth::proto::{
     VerifyAuthenticationReply, VerifyAuthenticationRequest,
 };
 
+struct UserData {
+    pub y1y2: crypto::NumTuple,
+    pub r1r2: Option<crypto::NumTuple>,
+    pub challenge: Option<BigUint>,
+}
+
 pub struct ZkpAuthService {
+    // TODO: rename
+    // username -> (y1, y2)
     db: Arc<Mutex<HashMap<String, crypto::NumTuple>>>,
-    // challenges: Arc<Mutex<HashMap<String, uint64>>>,
+    // TODO: better name?
+    // (username, challenge_c) -> (r1, r2)
+    // challenge_c -> username, (r1, r2)
+    // challenges: Arc<Mutex<HashMap<String, crypto::NumTuple>>>,
+    // challenges.set(^^) -> setTimeout(() => challenges.delete())
+    // username -> challenge_c, (r1, r2)
+    // challenges.get((username, challenge_c)) => Option<(r1, r2)>
 }
 
 #[tonic::async_trait]
@@ -72,8 +86,8 @@ impl Auth for ZkpAuthService {
         request: Request<VerifyAuthenticationRequest>,
     ) -> Result<Response<VerifyAuthenticationReply>, Status> {
         let data = request.into_inner();
-        let _id = data.auth_uid;
         let username = data.username;
+        let challenge_c: BigUint = BigUint::from_bytes_be(&data.challenge_c);
         let answer_s = BigUint::from_bytes_be(&data.answer_s);
 
         // TODO
@@ -86,7 +100,6 @@ impl Auth for ZkpAuthService {
         // TODO lookup from hashmap
         let r1: BigUint = 8_u32.into();
         let r2 = BigUint::from(4_u32);
-        let challenge_c = BigUint::from(4_u32);
 
         let db = self.db.lock().unwrap();
         let commits = db.get(&username);
