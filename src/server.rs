@@ -97,15 +97,9 @@ impl Auth for ZkpAuthService {
         let rs = challenges.get(&(username.clone(), challenge_c.clone()));
 
         let result = match (ys, rs) {
-            (Some((y1, y2)), Some((r1, r2))) => crypto::verify_authentication(
-                consts,
-                y1.clone(),
-                y2.clone(),
-                r1.clone(),
-                r2.clone(),
-                challenge_c,
-                answer_s,
-            ),
+            (Some((y1, y2)), Some((r1, r2))) => {
+                crypto::verify_authentication(&consts, y1, y2, r1, r2, &challenge_c, &answer_s)
+            }
             _ => false,
         };
 

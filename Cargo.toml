@@ -20,5 +20,9 @@ num-traits = { version = "0.2.15", default-features = false }
 num-integer = "0.1.45"
 num-bigint = { version = "0.4.3", features = ["rand"] }
 
+[dev-dependencies]
+quickcheck = "1"
+quickcheck_macros = "1"
+
 [build-dependencies]
 tonic-build = "0.7.2"

@@ -33,7 +33,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let request = tonic::Request::new(RegisterRequest {
         username: username.to_string(),
-        commits: Some(crypto::create_register_commits(&consts, password.clone()).into()),
+        commits: Some(crypto::create_register_commits(&consts, password).into()),
     });
 
     let response = auth_service.register(request).await?;
@@ -63,8 +63,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         let request = tonic::Request::new(VerifyAuthenticationRequest {
             username: username.to_string(),
             challenge_c: BigUint::to_bytes_be(challenge_c),
-            answer_s: crypto::prove_authentication(k, q, password.clone(), challenge_c.clone())
-                .to_bytes_be(),
+            answer_s: crypto::prove_authentication(
+                &k,
+                &consts.q,
+                &BigUint::from_u32(10).unwrap(),
+                challenge_c,
+            )
+            .to_bytes_be(),
         });
 
         let response = auth_service.verify_authentication(request).await?;
@@ -72,7 +77,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         if login_result {
             println!("login successful, sleeping...");
-            sleep(Duration::new(u64::MAX, 1_000_000_000 - 1)).await;
+            sleep(Duration::new(u64::MAX, 0)).await;
         } else {
             println!("login failed");
         }

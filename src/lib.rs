@@ -1,6 +1,10 @@
 use num_bigint::BigUint;
 use std::convert::From;
 
+#[cfg(test)]
+#[macro_use]
+extern crate quickcheck;
+
 pub mod proto {
     tonic::include_proto!("zkp_auth");
 }
